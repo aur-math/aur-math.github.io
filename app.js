@@ -349,13 +349,29 @@ function historyStorageKey() {
     : `${legacyHistoryStorageKey}-anonymous`;
 }
 
-function migrateLegacyHistory() {
-  if (!state.currentUser || localStorage.getItem("kidmath-history-migrated")) return;
+async function migrateLegacyHistory() {
+  if (!state.currentUser) return;
   const legacyHistory = localStorage.getItem(legacyHistoryStorageKey);
   if (legacyHistory && !localStorage.getItem(historyStorageKey())) {
     localStorage.setItem(historyStorageKey(), legacyHistory);
   }
-  localStorage.setItem("kidmath-history-migrated", state.currentUser.id);
+  const migrationKey = `kidmath-cloud-history-migrated-${state.currentUser.id}`;
+  if (localStorage.getItem(migrationKey)) return;
+  const records = loadHistory().slice(0, 30).reverse();
+  try {
+    for (const record of records) {
+      await apiRequest("/api/history", {
+        method: "POST",
+        body: JSON.stringify(record)
+      });
+    }
+    localStorage.setItem(migrationKey, new Date().toISOString());
+    localStorage.removeItem(historyStorageKey());
+    localStorage.removeItem(legacyHistoryStorageKey);
+    await renderHistory(1);
+  } catch (error) {
+    console.error("Unable to migrate local exam history", error);
+  }
 }
 
 function roleLabel(role) {
