@@ -45,3 +45,12 @@ KIDmath site hosted at `https://aur-math.github.io`.
 The first successful login with username `admin` and the configured secret
 creates the administrator account. Passwords are stored only as salted PBKDF2
 hashes.
+
+## Deploy the site at aurtech.ca/kidmath
+
+The site build copies the root frontend files into the subdirectory structure
+required by Cloudflare Workers Static Assets.
+
+```bash
+npm run deploy:site
+```

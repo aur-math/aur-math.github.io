@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kidmath-site",
+  "main": "src/site.js",
+  "compatibility_date": "2026-07-01",
+  "routes": [
+    {
+      "pattern": "aurtech.ca/kidmath",
+      "zone_name": "aurtech.ca"
+    },
+    {
+      "pattern": "aurtech.ca/kidmath/*",
+      "zone_name": "aurtech.ca"
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/kidmath"]
+  }
+}

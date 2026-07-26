@@ -80,10 +80,15 @@ function publicUser(row) {
 
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin");
-  const allowedOrigin = env.ALLOWED_ORIGIN || "https://aur-math.github.io";
-  return origin === allowedOrigin
+  const allowedOrigins = String(
+    env.ALLOWED_ORIGINS || env.ALLOWED_ORIGIN || "https://aur-math.github.io"
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return origin && allowedOrigins.includes(origin)
     ? {
-        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Headers": "Authorization, Content-Type",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Max-Age": "86400",

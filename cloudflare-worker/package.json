@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "build:site": "node scripts/build-site.mjs",
+    "deploy:site": "npm run build:site && wrangler deploy --config wrangler.site.jsonc",
     "db:local": "wrangler d1 execute kidmath-users --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute kidmath-users --remote --file=./schema.sql"
   },
