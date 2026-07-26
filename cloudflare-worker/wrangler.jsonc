@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kidmath-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://aur-math.github.io",
+    "INITIAL_ADMIN_USERNAME": "admin"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kidmath-users",
+      "database_id": "ec5d29d1-7872-4f9c-8963-326888c05ad1"
+    }
+  ]
+}

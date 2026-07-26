@@ -1,9 +1,10 @@
-const CACHE_NAME = "kidmath-v6";
+const CACHE_NAME = "kidmath-v11";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=6",
-  "./app.js?v=6",
+  "./styles.css?v=11",
+  "./config.js",
+  "./app.js?v=11",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
@@ -23,7 +24,14 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (
+    event.request.method !== "GET" ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api/")
+  ) {
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {

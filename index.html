@@ -10,36 +10,64 @@
     <title>KIDmath</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icon.svg">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=11">
   </head>
   <body>
     <main class="app-shell">
-      <section id="setup-view" class="view setup-view" aria-labelledby="app-title">
+      <nav class="language-switch" aria-label="语言选择" data-i18n-aria="languageLabel">
+        <button type="button" data-language="zh" aria-pressed="true">中文</button>
+        <button type="button" data-language="en" aria-pressed="false">English</button>
+        <button type="button" data-language="fr" aria-pressed="false">Français</button>
+      </nav>
+
+      <section id="login-view" class="view auth-view" aria-labelledby="login-title">
+        <form id="login-form" class="auth-panel">
+          <p class="eyebrow">KIDmath</p>
+          <h1 id="login-title" data-i18n="loginTitle">登录</h1>
+          <p class="auth-intro" data-i18n="loginIntro">使用管理员创建的账号进入数学小测。</p>
+          <label class="field-label" for="login-username" data-i18n="username">用户名</label>
+          <input id="login-username" name="username" type="text" autocomplete="username" required>
+          <label class="field-label" for="login-password" data-i18n="password">密码</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          <p id="login-error" class="form-message error-message hidden" role="alert"></p>
+          <button id="login-submit" class="primary-action" type="submit" data-i18n="loginAction">登录</button>
+        </form>
+      </section>
+
+      <div id="user-bar" class="user-bar hidden">
+        <span id="current-user"></span>
+        <div class="user-actions">
+          <button id="open-admin" class="secondary-action small-action hidden" type="button" data-i18n="admin">管理员</button>
+          <button id="logout" class="secondary-action small-action" type="button" data-i18n="logout">退出</button>
+        </div>
+      </div>
+
+      <section id="setup-view" class="view setup-view hidden" aria-labelledby="app-title">
         <div class="brand-row">
           <div>
             <p class="eyebrow">KIDmath</p>
-            <h1 id="app-title">数学小测</h1>
+            <h1 id="app-title" data-i18n="appTitle">数学小测</h1>
           </div>
-          <div class="mini-score" aria-label="试卷预览">
+          <div class="mini-score" aria-label="试卷预览" data-i18n-aria="paperPreview">
             <span id="preview-count">20</span>
-            <small>题</small>
+            <small data-i18n="questionUnit">题</small>
           </div>
         </div>
 
         <form id="exam-form" class="settings-grid">
           <fieldset class="panel">
-            <legend>年级难度</legend>
-            <div class="segmented" role="radiogroup" aria-label="年级难度">
-              <label><input type="radio" name="grade" value="1"><span>一年级</span></label>
-              <label><input type="radio" name="grade" value="2" checked><span>二年级</span></label>
-              <label><input type="radio" name="grade" value="3"><span>三年级</span></label>
-              <label><input type="radio" name="grade" value="4"><span>四年级</span></label>
-              <label><input type="radio" name="grade" value="5"><span>五年级</span></label>
+            <legend data-i18n="gradeLevel">年级难度</legend>
+            <div class="segmented" role="radiogroup" aria-label="年级难度" data-i18n-aria="gradeLevel">
+              <label><input type="radio" name="grade" value="1"><span data-i18n="grade1">一年级</span></label>
+              <label><input type="radio" name="grade" value="2" checked><span data-i18n="grade2">二年级</span></label>
+              <label><input type="radio" name="grade" value="3"><span data-i18n="grade3">三年级</span></label>
+              <label><input type="radio" name="grade" value="4"><span data-i18n="grade4">四年级</span></label>
+              <label><input type="radio" name="grade" value="5"><span data-i18n="grade5">五年级</span></label>
             </div>
           </fieldset>
 
           <fieldset class="panel">
-            <legend>计算方法</legend>
+            <legend data-i18n="operations">计算方法</legend>
             <div class="operator-grid">
               <label><input type="checkbox" name="ops" value="+" checked><span>+</span></label>
               <label><input type="checkbox" name="ops" value="-" checked><span>-</span></label>
@@ -50,7 +78,7 @@
 
           <section class="panel range-panel" aria-labelledby="count-label">
             <div class="panel-head">
-              <h2 id="count-label">题目数量</h2>
+              <h2 id="count-label" data-i18n="questionCount">题目数量</h2>
               <output id="count-output" for="question-count">20</output>
             </div>
             <input id="question-count" name="count" type="range" min="5" max="60" step="5" value="20">
@@ -58,22 +86,22 @@
 
           <section class="panel range-panel" aria-labelledby="time-label">
             <div class="panel-head">
-              <h2 id="time-label">考试时间</h2>
+              <h2 id="time-label" data-i18n="examTime">考试时间</h2>
               <output id="time-output" for="exam-time">10 分钟</output>
             </div>
             <input id="exam-time" name="minutes" type="range" min="1" max="60" step="1" value="10">
           </section>
 
-          <button class="primary-action" type="submit">开始考试</button>
+          <button class="primary-action" type="submit" data-i18n="startExam">开始考试</button>
         </form>
 
         <section class="history-section" aria-labelledby="history-title">
           <div class="section-head">
             <div>
               <p class="eyebrow">History</p>
-              <h2 id="history-title">历史记录</h2>
+              <h2 id="history-title" data-i18n="historyTitle">历史记录</h2>
             </div>
-            <button id="clear-history" class="secondary-action small-action" type="button">清空记录</button>
+            <button id="clear-history" class="secondary-action small-action" type="button" data-i18n="clearHistory">清空记录</button>
           </div>
           <div id="history-list" class="history-list"></div>
         </section>
@@ -82,12 +110,12 @@
       <section id="exam-view" class="view exam-view hidden" aria-labelledby="paper-title">
         <header class="exam-header">
           <div>
-            <p class="eyebrow">正在考试</p>
-            <h1 id="paper-title">数学小测</h1>
+            <p class="eyebrow" data-i18n="examInProgress">正在考试</p>
+            <h1 id="paper-title" data-i18n="appTitle">数学小测</h1>
           </div>
           <div class="timer-box" aria-live="polite">
             <span id="timer">10:00</span>
-            <small>剩余</small>
+            <small data-i18n="remaining">剩余</small>
           </div>
         </header>
 
@@ -96,14 +124,14 @@
         </div>
 
         <div class="exam-layout">
-          <section class="question-area" aria-label="题目">
+          <section class="question-area" aria-label="题目" data-i18n-aria="questions">
             <div id="question-list" class="question-list"></div>
           </section>
 
-          <aside class="scratch-panel" aria-label="草稿区域">
+          <aside class="scratch-panel" aria-label="草稿区域" data-i18n-aria="scratchArea">
             <div class="scratch-head">
-              <h2>草稿纸</h2>
-              <button id="clear-canvas" class="icon-button" type="button" aria-label="清空草稿">
+              <h2 data-i18n="scratchPaper">草稿纸</h2>
+              <button id="clear-canvas" class="icon-button" type="button" aria-label="清空草稿" data-i18n-aria="clearScratch">
                 <span aria-hidden="true">⌫</span>
               </button>
             </div>
@@ -112,14 +140,14 @@
         </div>
 
         <footer class="exam-actions">
-          <button id="finish-exam" class="primary-action compact" type="button">交卷</button>
+          <button id="finish-exam" class="primary-action compact" type="button" data-i18n="submitExam">交卷</button>
         </footer>
       </section>
 
       <section id="result-view" class="view result-view hidden" aria-labelledby="result-title">
         <div class="result-hero">
-          <p class="eyebrow">成绩</p>
-          <h1 id="result-title"><span id="score-value">0</span> 分</h1>
+          <p class="eyebrow" data-i18n="results">成绩</p>
+          <h1 id="result-title"><span id="score-value">0</span> <span data-i18n="points">分</span></h1>
           <p id="result-summary">答对 0 / 0 题</p>
           <p id="time-summary">已用 00:00，剩余 00:00</p>
         </div>
@@ -127,9 +155,62 @@
         <div id="review-list" class="review-list"></div>
 
         <div class="result-actions">
-          <button id="retry-same" class="secondary-action" type="button">再做一张</button>
-          <button id="back-setup" class="primary-action compact" type="button">主页</button>
+          <button id="retry-same" class="secondary-action" type="button" data-i18n="tryAnother">再做一张</button>
+          <button id="back-setup" class="primary-action compact" type="button" data-i18n="home">主页</button>
         </div>
+      </section>
+
+      <section id="admin-view" class="view admin-view hidden" aria-labelledby="admin-title">
+        <header class="admin-header">
+          <div>
+            <p class="eyebrow">Admin</p>
+            <h1 id="admin-title" data-i18n="userManagement">用户管理</h1>
+          </div>
+          <button id="admin-home" class="secondary-action small-action" type="button" data-i18n="home">主页</button>
+        </header>
+
+        <form id="create-user-form" class="panel create-user-form">
+          <h2 data-i18n="addUser">添加用户</h2>
+          <div class="form-field">
+            <label class="field-label" for="new-username" data-i18n="username">用户名</label>
+            <input id="new-username" name="username" type="text" minlength="2" maxlength="32" autocomplete="off" required>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="new-password" data-i18n="password">密码</label>
+            <input id="new-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="new-role" data-i18n="role">权限</label>
+            <select id="new-role" name="role">
+              <option value="user" data-i18n="regularUser">普通用户</option>
+              <option value="admin" data-i18n="administrator">管理员</option>
+            </select>
+          </div>
+          <p id="admin-message" class="form-message hidden" role="status"></p>
+          <button class="primary-action compact" type="submit" data-i18n="addUser">添加用户</button>
+        </form>
+
+        <section class="admin-list-section" aria-labelledby="user-list-title">
+          <div class="section-head">
+            <h2 id="user-list-title" data-i18n="userList">用户列表</h2>
+            <button id="refresh-users" class="secondary-action small-action" type="button" data-i18n="refresh">刷新</button>
+          </div>
+          <div class="user-table-wrap">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th data-i18n="username">用户名</th>
+                  <th data-i18n="role">权限</th>
+                  <th data-i18n="loginCount">登录次数</th>
+                  <th data-i18n="usageDuration">使用时长</th>
+                  <th data-i18n="lastLogin">最近登录</th>
+                  <th data-i18n="actions">操作</th>
+                </tr>
+              </thead>
+              <tbody id="user-list"></tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
 
@@ -142,6 +223,7 @@
       </article>
     </template>
 
-    <script src="app.js?v=6" defer></script>
+    <script src="config.js"></script>
+    <script src="app.js?v=11" defer></script>
   </body>
 </html>

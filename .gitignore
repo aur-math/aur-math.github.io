@@ -1,0 +1,4 @@
+data/
+access-log.jsonl
+.wrangler/
+node_modules/
