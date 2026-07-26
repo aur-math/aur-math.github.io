@@ -250,6 +250,7 @@ function historySummary(row) {
 }
 
 function validHistoryRecord(record) {
+  const createdAt = new Date(record?.createdAt);
   return (
     record &&
     typeof record === "object" &&
@@ -268,6 +269,8 @@ function validHistoryRecord(record) {
     Number.isInteger(record.wrongCount) &&
     Number.isInteger(record.usedSeconds) &&
     Number.isInteger(record.remainingSeconds) &&
+    Number.isFinite(createdAt.getTime()) &&
+    createdAt.getTime() <= Date.now() + 5 * 60 * 1000 &&
     Array.isArray(record.results) &&
     record.results.length === record.totalCount
   );
@@ -347,7 +350,7 @@ async function handleRequest(request, env) {
       return json(request, env, { error: "INVALID_HISTORY" }, 400);
     }
     const id = crypto.randomUUID();
-    const createdAt = new Date().toISOString();
+    const createdAt = new Date(record.createdAt).toISOString();
     const storedRecord = { ...record, id, createdAt };
     delete storedRecord.snapshot;
     const detailJson = JSON.stringify(storedRecord);
