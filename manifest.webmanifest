@@ -1,0 +1,19 @@
+{
+  "name": "KIDmath 数学小测",
+  "short_name": "KIDmath",
+  "description": "为孩子随机生成简单数学试卷的离线练习应用。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fffaf0",
+  "theme_color": "#f7f3e8",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
