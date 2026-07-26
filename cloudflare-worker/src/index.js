@@ -118,7 +118,7 @@ function empty(request, env, status = 204) {
 
 async function readJson(request) {
   const contentLength = Number(request.headers.get("Content-Length") || 0);
-  if (contentLength > 8192) throw new Error("INVALID_JSON");
+  if (contentLength > 65536) throw new Error("INVALID_JSON");
   return request.json();
 }
 
@@ -235,6 +235,44 @@ async function requireAdmin(request, env) {
   return authentication?.row.role === "admin" ? authentication : null;
 }
 
+function historySummary(row) {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    settings: { grade: row.grade, ops: JSON.parse(row.operations) },
+    score: row.score,
+    correctCount: row.correct_count,
+    totalCount: row.total_count,
+    wrongCount: row.wrong_count,
+    usedSeconds: row.used_seconds,
+    remainingSeconds: row.remaining_seconds,
+  };
+}
+
+function validHistoryRecord(record) {
+  return (
+    record &&
+    typeof record === "object" &&
+    Number.isInteger(record.settings?.grade) &&
+    Array.isArray(record.settings?.ops) &&
+    record.settings.ops.length > 0 &&
+    record.settings.ops.length <= 4 &&
+    record.settings.ops.every((op) => ["+", "-", "*", "/"].includes(op)) &&
+    Number.isInteger(record.score) &&
+    record.score >= 0 &&
+    record.score <= 100 &&
+    Number.isInteger(record.correctCount) &&
+    Number.isInteger(record.totalCount) &&
+    record.totalCount >= 1 &&
+    record.totalCount <= 60 &&
+    Number.isInteger(record.wrongCount) &&
+    Number.isInteger(record.usedSeconds) &&
+    Number.isInteger(record.remainingSeconds) &&
+    Array.isArray(record.results) &&
+    record.results.length === record.totalCount
+  );
+}
+
 async function handleRequest(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(request, env) });
@@ -272,6 +310,102 @@ async function handleRequest(request, env) {
     if (!authentication) return json(request, env, { error: "UNAUTHORIZED" }, 401);
     await accrueUsage(env, authentication);
     return empty(request, env);
+  }
+
+  if (pathname === "/api/history" && request.method === "GET") {
+    const authentication = await authenticate(request, env);
+    if (!authentication) return json(request, env, { error: "UNAUTHORIZED" }, 401);
+    const requestedPage = Number(url.searchParams.get("page") || 1);
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const pageSize = 10;
+    const countRow = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM exam_history WHERE user_id = ?1"
+    ).bind(authentication.row.id).first();
+    const total = Number(countRow.count || 0);
+    const result = await env.DB.prepare(
+      `SELECT id, created_at, grade, operations, score, correct_count,
+              total_count, wrong_count, used_seconds, remaining_seconds
+       FROM exam_history
+       WHERE user_id = ?1
+       ORDER BY created_at DESC
+       LIMIT ?2 OFFSET ?3`
+    ).bind(authentication.row.id, pageSize, (page - 1) * pageSize).all();
+    return json(request, env, {
+      records: result.results.map(historySummary),
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
+  }
+
+  if (pathname === "/api/history" && request.method === "POST") {
+    const authentication = await authenticate(request, env);
+    if (!authentication) return json(request, env, { error: "UNAUTHORIZED" }, 401);
+    const record = await readJson(request);
+    if (!validHistoryRecord(record)) {
+      return json(request, env, { error: "INVALID_HISTORY" }, 400);
+    }
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const storedRecord = { ...record, id, createdAt };
+    delete storedRecord.snapshot;
+    const detailJson = JSON.stringify(storedRecord);
+    if (detailJson.length > 60000) {
+      return json(request, env, { error: "HISTORY_TOO_LARGE" }, 400);
+    }
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO exam_history
+          (id, user_id, created_at, grade, operations, score, correct_count,
+           total_count, wrong_count, used_seconds, remaining_seconds, detail_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+      ).bind(
+        id,
+        authentication.row.id,
+        createdAt,
+        record.settings.grade,
+        JSON.stringify(record.settings.ops),
+        record.score,
+        record.correctCount,
+        record.totalCount,
+        record.wrongCount,
+        record.usedSeconds,
+        record.remainingSeconds,
+        detailJson
+      ),
+      env.DB.prepare(
+        `DELETE FROM exam_history
+         WHERE user_id = ?1
+           AND id NOT IN (
+             SELECT id FROM exam_history
+             WHERE user_id = ?1
+             ORDER BY created_at DESC
+             LIMIT 30
+           )`
+      ).bind(authentication.row.id),
+    ]);
+    return json(request, env, { record: storedRecord }, 201);
+  }
+
+  if (pathname === "/api/history" && request.method === "DELETE") {
+    const authentication = await authenticate(request, env);
+    if (!authentication) return json(request, env, { error: "UNAUTHORIZED" }, 401);
+    await env.DB.prepare("DELETE FROM exam_history WHERE user_id = ?1")
+      .bind(authentication.row.id)
+      .run();
+    return empty(request, env);
+  }
+
+  const historyMatch = pathname.match(/^\/api\/history\/([^/]+)$/);
+  if (historyMatch && request.method === "GET") {
+    const authentication = await authenticate(request, env);
+    if (!authentication) return json(request, env, { error: "UNAUTHORIZED" }, 401);
+    const row = await env.DB.prepare(
+      "SELECT detail_json FROM exam_history WHERE id = ?1 AND user_id = ?2"
+    ).bind(historyMatch[1], authentication.row.id).first();
+    if (!row) return json(request, env, { error: "NOT_FOUND" }, 404);
+    return json(request, env, { record: JSON.parse(row.detail_json) });
   }
 
   if (pathname === "/api/admin/users" && request.method === "GET") {

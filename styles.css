@@ -603,6 +603,16 @@ input[type="range"] {
   gap: 12px;
 }
 
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+  color: #6d6a60;
+  font-weight: 700;
+}
+
 .history-item {
   overflow: hidden;
   border: 1px solid var(--line);

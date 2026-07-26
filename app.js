@@ -12,7 +12,9 @@ const state = {
   latestRecord: null,
   currentUser: null,
   adminUsers: [],
-  heartbeatId: null
+  heartbeatId: null,
+  historyPage: 1,
+  historyTotalPages: 1
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -90,6 +92,7 @@ const translations = {
     wrongSummary: "错题 {wrong} 题",
     gradeMeta: "{grade} 年级  {ops}  {total} 题",
     noHistory: "还没有考试记录",
+    historyLoadFailed: "历史记录暂时无法加载，请稍后重试。",
     screenshotAlt: "{date} 成绩截图",
     historyAria: "查看 {score} 分的试卷明细",
     historyMeta: "{date} · {grade} 年级 · {total} 题",
@@ -172,6 +175,7 @@ const translations = {
     wrongSummary: "Incorrect: {wrong}",
     gradeMeta: "Grade {grade}  {ops}  {total} questions",
     noHistory: "No tests yet",
+    historyLoadFailed: "History is temporarily unavailable. Please try again.",
     screenshotAlt: "Score snapshot from {date}",
     historyAria: "View the test scored {score} points",
     historyMeta: "{date} · Grade {grade} · {total} questions",
@@ -254,6 +258,7 @@ const translations = {
     wrongSummary: "Erreurs : {wrong}",
     gradeMeta: "Niveau {grade}  {ops}  {total} questions",
     noHistory: "Aucun test pour le moment",
+    historyLoadFailed: "L’historique est temporairement indisponible. Réessaie plus tard.",
     screenshotAlt: "Capture du résultat du {date}",
     historyAria: "Voir le test ayant obtenu {score} points",
     historyMeta: "{date} · Niveau {grade} · {total} questions",
@@ -734,7 +739,7 @@ function collectAnswers() {
   });
 }
 
-function finishExam() {
+async function finishExam() {
   if (state.finished) return;
   state.finished = true;
   state.endedAt = Date.now();
@@ -743,7 +748,11 @@ function finishExam() {
   state.remainingSeconds = Math.max(0, state.totalSeconds - elapsed);
   collectAnswers();
   const record = renderResults(elapsed, state.remainingSeconds);
-  saveHistoryRecord(record);
+  try {
+    await saveHistoryRecord(record);
+  } catch (error) {
+    console.error("Unable to sync exam history", error);
+  }
   state.settings = record.settings;
   switchView(resultView);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -862,11 +871,13 @@ function saveHistory(records) {
   localStorage.setItem(historyStorageKey(), JSON.stringify(records));
 }
 
-function saveHistoryRecord(record) {
-  const records = loadHistory();
-  records.unshift(record);
-  saveHistory(records.slice(0, 50));
-  renderHistory();
+async function saveHistoryRecord(record) {
+  await apiRequest("/api/history", {
+    method: "POST",
+    body: JSON.stringify(record)
+  });
+  state.historyPage = 1;
+  await renderHistory();
 }
 
 function formatDateTime(value) {
@@ -931,9 +942,32 @@ function createResultSnapshot(record) {
   return snapshotCanvas.toDataURL("image/png");
 }
 
-function renderHistory() {
-  const records = loadHistory();
+async function loadHistoryPage(page = 1) {
+  return apiRequest(`/api/history?page=${page}`);
+}
+
+async function loadHistoryRecord(id) {
+  const response = await apiRequest(`/api/history/${encodeURIComponent(id)}`);
+  return response.record;
+}
+
+async function renderHistory(page = state.historyPage) {
   historyList.textContent = "";
+  const pagination = $("#history-pagination");
+  pagination.classList.add("hidden");
+  let response;
+  try {
+    response = await loadHistoryPage(page);
+  } catch {
+    const empty = document.createElement("p");
+    empty.className = "empty-history";
+    empty.textContent = t("historyLoadFailed");
+    historyList.appendChild(empty);
+    return;
+  }
+  const records = response.records;
+  state.historyPage = response.page;
+  state.historyTotalPages = response.totalPages;
 
   if (!records.length) {
     const empty = document.createElement("p");
@@ -970,15 +1004,26 @@ function renderHistory() {
       wrong: record.wrongCount,
       used: formatSeconds(record.usedSeconds)
     });
-    title.addEventListener("click", () => {
-      renderResultRecord(record);
-      switchView(resultView);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    title.addEventListener("click", async () => {
+      title.disabled = true;
+      try {
+        const fullRecord = await loadHistoryRecord(record.id);
+        renderResultRecord(fullRecord);
+        switchView(resultView);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        title.disabled = false;
+      }
     });
     body.append(title, meta, detail);
     item.append(image, body);
     historyList.appendChild(item);
   });
+
+  $("#history-page-status").textContent = `${response.page} / ${response.totalPages}`;
+  $("#history-previous").disabled = response.page <= 1;
+  $("#history-next").disabled = response.page >= response.totalPages;
+  pagination.classList.toggle("hidden", response.totalPages <= 1);
 }
 
 function clearCanvas() {
@@ -1074,9 +1119,18 @@ $("#back-setup").addEventListener("click", () => {
   switchView(setupView);
 });
 
-$("#clear-history").addEventListener("click", () => {
-  localStorage.removeItem(historyStorageKey());
-  renderHistory();
+$("#clear-history").addEventListener("click", async () => {
+  await apiRequest("/api/history", { method: "DELETE" });
+  state.historyPage = 1;
+  await renderHistory();
+});
+
+$("#history-previous").addEventListener("click", () => {
+  if (state.historyPage > 1) renderHistory(state.historyPage - 1);
+});
+
+$("#history-next").addEventListener("click", () => {
+  if (state.historyPage < state.historyTotalPages) renderHistory(state.historyPage + 1);
 });
 
 $("#login-form").addEventListener("submit", async (event) => {
