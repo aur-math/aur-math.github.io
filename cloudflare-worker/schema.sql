@@ -32,6 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at
 CREATE TABLE IF NOT EXISTS exam_history (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
+  client_id TEXT,
   created_at TEXT NOT NULL,
   grade INTEGER NOT NULL,
   operations TEXT NOT NULL,
@@ -47,3 +48,6 @@ CREATE TABLE IF NOT EXISTS exam_history (
 
 CREATE INDEX IF NOT EXISTS idx_exam_history_user_created
   ON exam_history(user_id, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_exam_history_user_client
+  ON exam_history(user_id, client_id);

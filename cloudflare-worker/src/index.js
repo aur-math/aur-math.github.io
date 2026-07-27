@@ -271,6 +271,9 @@ function validHistoryRecord(record) {
     Number.isInteger(record.remainingSeconds) &&
     Number.isFinite(createdAt.getTime()) &&
     createdAt.getTime() <= Date.now() + 5 * 60 * 1000 &&
+    typeof record.id === "string" &&
+    record.id.length >= 8 &&
+    record.id.length <= 100 &&
     Array.isArray(record.results) &&
     record.results.length === record.totalCount
   );
@@ -350,6 +353,7 @@ async function handleRequest(request, env) {
       return json(request, env, { error: "INVALID_HISTORY" }, 400);
     }
     const id = crypto.randomUUID();
+    const clientId = record.id;
     const createdAt = new Date(record.createdAt).toISOString();
     const storedRecord = { ...record, id, createdAt };
     delete storedRecord.snapshot;
@@ -359,13 +363,14 @@ async function handleRequest(request, env) {
     }
     await env.DB.batch([
       env.DB.prepare(
-        `INSERT INTO exam_history
-          (id, user_id, created_at, grade, operations, score, correct_count,
+        `INSERT OR IGNORE INTO exam_history
+          (id, user_id, client_id, created_at, grade, operations, score, correct_count,
            total_count, wrong_count, used_seconds, remaining_seconds, detail_json)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`
       ).bind(
         id,
         authentication.row.id,
+        clientId,
         createdAt,
         record.settings.grade,
         JSON.stringify(record.settings.ops),
