@@ -51,3 +51,9 @@ CREATE INDEX IF NOT EXISTS idx_exam_history_user_created
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_exam_history_user_client
   ON exam_history(user_id, client_id);
+
+CREATE TABLE IF NOT EXISTS auth_rate_limits (
+  key TEXT PRIMARY KEY,
+  attempts INTEGER NOT NULL,
+  expires_at TEXT NOT NULL
+);

@@ -43,7 +43,7 @@ const historyList = $("#history-list");
 const legacyHistoryStorageKey = "kidmath-exam-history";
 const visitorStorageKey = "kidmath-visitor-id";
 const languageStorageKey = "kidmath-language";
-const authTokenStorageKey = "kidmath-auth-token";
+const legacyAuthTokenStorageKey = "kidmath-auth-token";
 const apiBaseUrl = String(window.KIDMATH_API_URL || "").replace(/\/$/, "");
 const supportedLanguages = ["zh", "en", "fr"];
 const languageLocales = {
@@ -325,12 +325,10 @@ function apiUrl(path) {
 
 async function apiRequest(path, options = {}) {
   const headers = new Headers(options.headers || {});
-  const token = localStorage.getItem(authTokenStorageKey);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const response = await fetch(apiUrl(path), { ...options, headers });
+  const response = await fetch(apiUrl(path), { ...options, headers, credentials: "include" });
   const payload =
     response.status === 204
       ? null
@@ -392,7 +390,7 @@ function showLogin(messageKey = "") {
   clearInterval(state.heartbeatId);
   state.currentUser = null;
   state.adminUsers = [];
-  localStorage.removeItem(authTokenStorageKey);
+  localStorage.removeItem(legacyAuthTokenStorageKey);
   $("#login-password").value = "";
   [setupView, examView, resultView, adminView].forEach((view) => view.classList.add("hidden"));
   userBar.classList.add("hidden");
@@ -424,10 +422,7 @@ function showAuthenticatedApp(user) {
 }
 
 async function restoreSession() {
-  if (!localStorage.getItem(authTokenStorageKey)) {
-    showLogin();
-    return;
-  }
+  localStorage.removeItem(legacyAuthTokenStorageKey);
   try {
     const result = await apiRequest("/api/auth/me");
     showAuthenticatedApp(result.user);
@@ -1167,7 +1162,6 @@ $("#login-form").addEventListener("submit", async (event) => {
         password: $("#login-password").value
       })
     });
-    localStorage.setItem(authTokenStorageKey, result.token);
     $("#login-password").value = "";
     showAuthenticatedApp(result.user);
   } catch (error) {

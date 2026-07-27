@@ -1,4 +1,4 @@
-const sessionLifetimeMs = 7 * 24 * 60 * 60 * 1000;
+const sessionLifetimeMs = 24 * 60 * 60 * 1000;
 const encoder = new TextEncoder();
 
 function bytesToBase64Url(bytes) {
@@ -91,6 +91,7 @@ function corsHeaders(request, env) {
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Headers": "Authorization, Content-Type",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Max-Age": "86400",
         Vary: "Origin",
       }
@@ -123,8 +124,32 @@ async function readJson(request) {
 }
 
 function bearerToken(request) {
+  const cookie = request.headers.get("Cookie") || "";
+  const sessionCookie = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("kidmath_session="));
+  if (sessionCookie) return decodeURIComponent(sessionCookie.slice("kidmath_session=".length));
   const authorization = request.headers.get("Authorization") || "";
   return authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+}
+
+async function loginAllowed(request, env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS auth_rate_limits (
+    key TEXT PRIMARY KEY,
+    attempts INTEGER NOT NULL,
+    expires_at TEXT NOT NULL
+  )`).run();
+  const windowSeconds = 15 * 60;
+  const bucket = Math.floor(Date.now() / (windowSeconds * 1000));
+  const address = request.headers.get("CF-Connecting-IP") || "unknown";
+  const key = `login:${address}:${bucket}`;
+  const expiresAt = new Date((bucket + 2) * windowSeconds * 1000).toISOString();
+  const row = await env.DB.prepare(`INSERT INTO auth_rate_limits (key, attempts, expires_at)
+    VALUES (?1, 1, ?2)
+    ON CONFLICT(key) DO UPDATE SET attempts = attempts + 1
+    RETURNING attempts`).bind(key, expiresAt).first();
+  return Number(row?.attempts || 1) <= 8;
 }
 
 async function authenticate(request, env) {
@@ -179,6 +204,9 @@ async function createInitialAdminIfNeeded(env, username, password) {
 }
 
 async function login(request, env) {
+  if (!(await loginAllowed(request, env))) {
+    return json(request, env, { error: "TOO_MANY_ATTEMPTS" }, 429);
+  }
   const input = await readJson(request);
   const username = String(input.username || "").trim();
   const password = String(input.password || "");
@@ -209,7 +237,12 @@ async function login(request, env) {
   ]);
   user.login_count = Number(user.login_count || 0) + 1;
   user.last_login = now.toISOString();
-  return json(request, env, { token, user: publicUser(user) });
+  const response = json(request, env, { user: publicUser(user) });
+  response.headers.set(
+    "Set-Cookie",
+    `kidmath_session=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`
+  );
+  return response;
 }
 
 async function accrueUsage(env, authentication) {
@@ -308,7 +341,12 @@ async function handleRequest(request, env) {
     await env.DB.prepare("DELETE FROM sessions WHERE token = ?1")
       .bind(bearerToken(request))
       .run();
-    return empty(request, env);
+    const response = empty(request, env);
+    response.headers.set(
+      "Set-Cookie",
+      "kidmath_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
+    );
+    return response;
   }
 
   if (pathname === "/api/usage/heartbeat" && request.method === "POST") {
