@@ -1,10 +1,10 @@
-const CACHE_NAME = "kidmath-v15";
+const CACHE_NAME = "kidmath-v16";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css?v=11",
-  "./config.js",
-  "./app.js?v=14",
+  "./config.js?v=2",
+  "./app.js?v=15",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
