@@ -14,7 +14,8 @@ const state = {
   adminUsers: [],
   heartbeatId: null,
   historyPage: 1,
-  historyTotalPages: 1
+  historyTotalPages: 1,
+  historyRenderId: 0
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -968,6 +969,7 @@ async function loadHistoryRecord(id) {
 }
 
 async function renderHistory(page = state.historyPage) {
+  const renderId = ++state.historyRenderId;
   historyList.textContent = "";
   const pagination = $("#history-pagination");
   pagination.classList.add("hidden");
@@ -975,12 +977,14 @@ async function renderHistory(page = state.historyPage) {
   try {
     response = await loadHistoryPage(page);
   } catch {
+    if (renderId !== state.historyRenderId) return;
     const empty = document.createElement("p");
     empty.className = "empty-history";
     empty.textContent = t("historyLoadFailed");
     historyList.appendChild(empty);
     return;
   }
+  if (renderId !== state.historyRenderId) return;
   const records = response.records;
   state.historyPage = response.page;
   state.historyTotalPages = response.totalPages;
